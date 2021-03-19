@@ -2,7 +2,7 @@ const { assert } = require("chai");
 
 let kleinContract
 let wrapperContract
-let recordOwnerAddress = "0x00d7e4903c6d88deeb29eecd9e7e853a31c46554"
+let whaleOwnerAddress = "0x00d7e4903c6d88deeb29eecd9e7e853a31c46554"
 async function impersonate(address){
   await network.provider.request({
     method: "hardhat_impersonateAccount",
@@ -17,7 +17,7 @@ async function stopImpersonate(address){
   )
 }
 
-async function fork(){
+async function reset(){
   await network.provider.request({
     method: "hardhat_reset",
     params: [{
@@ -29,7 +29,7 @@ async function fork(){
   })
 }
 
-async function getRecordOwner(edition){
+async function getwhaleOwner(edition){
   return (await kleinContract.records(edition)).addr
 }
 
@@ -49,6 +49,20 @@ async function getDefaultProvider(){
   return (await ethers.getSigners())[0].provider
 }
 
+async function getSigner(address){
+  const balance = await hre.ethers.provider.getBalance(address)
+
+  const oneEth = hre.ethers.utils.parseEther("1")
+
+  if (balance.lt(oneEth)){
+    await (await ethers.getSigners())[0].sendTransaction({
+      to: address,
+      value: ethers.utils.parseEther("2")
+    })
+  }
+  return await hre.ethers.provider.getSigner(address)
+}
+
 function toNumber(BN){
   return BN.toNumber()
 }
@@ -58,22 +72,22 @@ before(function(done){
 })
 
 after(function(done){
-  fork().then(done)
+  reset().then(done)
 })
 
 
 describe("IKB Wrapper", function() {
   describe("wrapAll", function(){
+    let whaleOwner
+    before( async () => {
+      await impersonate(whaleOwnerAddress)
+
+      whaleOwner = await getSigner(whaleOwnerAddress)
+    })
     it("should mint new NFTs for each owned record if all approved", async function() {
       this.timeout(300000)
-      const editions = (await kleinContract.getHolderEditions(recordOwnerAddress)).map(toNumber)
-      assert.equal(editions.length, 10)
-      await impersonate(recordOwnerAddress)
-      const recordOwner = await hre.ethers.provider.getSigner(recordOwnerAddress)
-      await (await ethers.getSigners())[0].sendTransaction({
-        to: recordOwnerAddress,
-        value: ethers.utils.parseEther("10")
-      })
+      const editions = (await kleinContract.getHolderEditions(whaleOwnerAddress)).map(toNumber)
+      assert.equal(editions.length, 10, 'Test did not reset correctly')
 
       // Wrapper does not have minted editions
       for (let edition of editions){
@@ -85,19 +99,65 @@ describe("IKB Wrapper", function() {
         }
       }
 
-      assert.equal(toNumber(await wrapperContract.balanceOf(recordOwnerAddress)), 0, 'Wrapper did not properly reset')
+      assert.equal(toNumber(await wrapperContract.balanceOf(whaleOwnerAddress)), 0, 'Wrapper did not properly reset')
 
-      await kleinContract.connect(recordOwner).approve(wrapperContract.address, editions.length)
-      await wrapperContract.connect(recordOwner).wrapAll()
+      try {
+        await wrapperContract.connect(whaleOwner).wrapAll()
+        throw new Error('Wrapper expected to throw before approval')
+      } catch(e){
+        assert.isDefined(e)
+      }
 
-      assert.equal(toNumber(await wrapperContract.balanceOf(recordOwnerAddress)), editions.length, 'Wrapper did not mint correct number of tokens')
-      assert.equal(toNumber(await kleinContract.balanceOf(recordOwnerAddress)), 0, 'Klein did clear additions for record owner')
+      await kleinContract.connect(whaleOwner).approve(wrapperContract.address, editions.length)
+      await wrapperContract.connect(whaleOwner).wrapAll()
+
+      assert.equal(toNumber(await wrapperContract.balanceOf(whaleOwnerAddress)), editions.length, 'Wrapper did not mint correct number of tokens')
+      assert.equal(toNumber(await kleinContract.balanceOf(whaleOwnerAddress)), 0, 'Klein did clear additions for record owner')
       assert.equal(toNumber(await kleinContract.balanceOf(wrapperContract.address)), editions.length, 'Klein did not assign all editions to wrapper contract')
 
       for (let edition of editions){
-        assert.equal((await wrapperContract.ownerOf(editions[0])).toLowerCase(), recordOwnerAddress.toLowerCase(), 'Wrapper did not mint correctly')
+        assert.equal((await wrapperContract.ownerOf(editions[0])).toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Wrapper did not mint correctly')
         assert.equal((await kleinContract.records(edition)).addr.toLowerCase(), wrapperContract.address.toLowerCase(), 'Klein did not assign edition ownership to Wrapper')
       }
     });
+  })
+  describe("wrapSpecific", function(){
+    let whaleOwner
+
+    before( async () => {
+      await reset()
+      await impersonate(whaleOwnerAddress)
+
+      whaleOwner = await getSigner(whaleOwnerAddress)
+    })
+
+    it("should mint specific approved NFTS", async function(){
+      this.timeout(300000)
+
+      const allEditions = (await kleinContract.getHolderEditions(whaleOwnerAddress)).map(toNumber)
+      const specificEditions = [allEditions[0], allEditions[1]]
+
+      assert.equal(allEditions.length, 10, 'Test did not reset correctly')
+
+      for (let edition of specificEditions){
+        await kleinContract.connect(whaleOwner).specificApprove(wrapperContract.address, edition)
+      }
+
+      await wrapperContract.connect(whaleOwner).wrapSpecific(specificEditions)
+
+      assert.equal(toNumber(await wrapperContract.balanceOf(whaleOwnerAddress)), specificEditions.length, 'Wrapper did not mint correct number of tokens')
+
+      assert.equal(toNumber(await kleinContract.balanceOf(whaleOwnerAddress)), allEditions.length-specificEditions.length, 'Klein did clear additions for record owner')
+
+      assert.equal(toNumber(await kleinContract.balanceOf(wrapperContract.address)), specificEditions.length, 'Klein did not assign all editions to wrapper contract')
+
+      for (let edition of specificEditions){
+        assert.equal((await wrapperContract.ownerOf(edition)).toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Wrapper did not mint correctly')
+        assert.equal((await kleinContract.records(edition)).addr.toLowerCase(), wrapperContract.address.toLowerCase(), 'Klein did not assign edition ownership to Wrapper')
+      }
+
+      // Sanity Check
+      assert.equal((await kleinContract.records(allEditions[specificEditions.length])).addr.toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Klein wrapped an incorrect edition')
+    })
   })
 });

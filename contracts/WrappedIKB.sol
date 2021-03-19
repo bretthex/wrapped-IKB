@@ -24,10 +24,12 @@ contract WrappedIKB is ERC721 {
     return true;
   }
 
-  function wrapOne(uint _edition) public returns (bool){
-    require(Klein.specificTransferFrom(msg.sender, address(this), _edition), "WrappedIKB: IKB Token did not specificTransferFrom");
-
-    _safeMint(msg.sender, _edition);
+  function wrapSpecific(uint[] memory _editions) public returns (bool){
+    uint editionsLen = _editions.length;
+    for (uint i = 0; i < editionsLen; i++){
+      require(Klein.specificTransferFrom(msg.sender, address(this), _editions[i]), "WrappedIKB: IKB Token did not specificTransferFrom");
+      _safeMint(msg.sender, _editions[i]);
+    }
 
     return true;
   }
