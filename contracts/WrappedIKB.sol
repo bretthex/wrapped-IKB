@@ -47,15 +47,15 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
   }
 
   function wrapAll() public returns (bool){
-    uint256[] memory ownedRecords = Klein.getHolderEditions(msg.sender);
+    uint256[] memory ownedRecords = Klein.getHolderEditions(_msgSender());
     uint ownedRecordsLength = ownedRecords.length;
 
-    require(Klein.allowance(msg.sender,address(this)) >= ownedRecordsLength, "WrappedIKB: must approve all IKB tokens to be transfered");
+    require(Klein.allowance(_msgSender(),address(this)) >= ownedRecordsLength, "WrappedIKB: must approve all IKB tokens to be transfered");
 
-    require(Klein.transferFrom(msg.sender,address(this), ownedRecordsLength), "WrappedIKB: IKB Token did not transferFrom");
+    require(Klein.transferFrom(_msgSender(),address(this), ownedRecordsLength), "WrappedIKB: IKB Token did not transferFrom");
 
     for (uint i = 0; i < ownedRecordsLength; i++){
-      _safeMint(msg.sender, ownedRecords[i]);
+      _safeMint(_msgSender(), ownedRecords[i]);
     }
 
     return true;
@@ -63,9 +63,14 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
 
   function wrapSpecific(uint[] memory _editions) public returns (bool){
     uint editionsLen = _editions.length;
+
     for (uint i = 0; i < editionsLen; i++){
-      require(Klein.specificTransferFrom(msg.sender, address(this), _editions[i]), "WrappedIKB: IKB Token did not specificTransferFrom");
-      _safeMint(msg.sender, _editions[i]);
+      require(Klein.specificTransferFrom(_msgSender(), address(this), _editions[i]), "WrappedIKB: IKB Token did not specificTransferFrom");
+      _safeMint(_msgSender(), _editions[i]);
+    }
+
+    return true;
+  }
     }
 
     return true;
