@@ -60,6 +60,7 @@ async function getSigner(address){
       value: ethers.utils.parseEther("2")
     })
   }
+
   return await hre.ethers.provider.getSigner(address)
 }
 
@@ -67,25 +68,19 @@ function toNumber(BN){
   return BN.toNumber()
 }
 
-before(function(done){
-  attachKlein().then(deployWrapper).then(done)
-})
-
-after(function(done){
-  reset().then(done)
+beforeEach(function(done){
+  reset()
+  .then(attachKlein)
+  .then(deployWrapper)
+  .then(()=>impersonate(whaleOwnerAddress)).then(done)
 })
 
 
 describe("IKB Wrapper", function() {
   describe("wrapAll", function(){
-    let whaleOwner
-    before( async () => {
-      await impersonate(whaleOwnerAddress)
-
-      whaleOwner = await getSigner(whaleOwnerAddress)
-    })
     it("should mint new NFTs for each owned record if all approved", async function() {
       this.timeout(300000)
+      const whaleOwner = await getSigner(whaleOwnerAddress)
       const editions = (await kleinContract.getHolderEditions(whaleOwnerAddress)).map(toNumber)
       assert.equal(editions.length, 10, 'Test did not reset correctly')
 
@@ -121,18 +116,11 @@ describe("IKB Wrapper", function() {
       }
     });
   })
+
   describe("wrapSpecific", function(){
-    let whaleOwner
-
-    before( async () => {
-      await reset()
-      await impersonate(whaleOwnerAddress)
-
-      whaleOwner = await getSigner(whaleOwnerAddress)
-    })
-
     it("should mint specific approved NFTS", async function(){
       this.timeout(300000)
+      const whaleOwner = await getSigner(whaleOwnerAddress)
 
       const allEditions = (await kleinContract.getHolderEditions(whaleOwnerAddress)).map(toNumber)
       const specificEditions = [allEditions[0], allEditions[1]]
@@ -141,9 +129,10 @@ describe("IKB Wrapper", function() {
 
       for (let edition of specificEditions){
         await kleinContract.connect(whaleOwner).specificApprove(wrapperContract.address, edition)
-      }
 
-      await wrapperContract.connect(whaleOwner).wrapSpecific(specificEditions)
+      }
+      const c = wrapperContract.connect(whaleOwner)
+      await c.wrapSpecific(specificEditions)
 
       assert.equal(toNumber(await wrapperContract.balanceOf(whaleOwnerAddress)), specificEditions.length, 'Wrapper did not mint correct number of tokens')
 
