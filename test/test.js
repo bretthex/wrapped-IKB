@@ -151,4 +151,43 @@ describe("IKB Wrapper", function() {
       assert.equal((await kleinContract.records(allEditions[specificEditions.length])).addr.toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Klein wrapped an incorrect edition')
     })
   })
+
+  describe("unwrapAll", function(){
+     it("should transfer back and burn all tokens", async function(){
+
+       // Setup
+       this.timeout(300000)
+
+       const whaleOwner = await getSigner(whaleOwnerAddress)
+       const editions = (await kleinContract.getHolderEditions(whaleOwnerAddress)).map(toNumber)
+
+       assert.equal(editions.length, 10, 'Test did not reset correctly')
+
+       await kleinContract.connect(whaleOwner).approve(wrapperContract.address, editions.length)
+
+       await wrapperContract.connect(whaleOwner).wrapAll()
+
+       assert.equal(toNumber(await kleinContract.balanceOf(wrapperContract.address)), editions.length, 'Klein did not assign all editions to wrapper contract')
+
+       await wrapperContract.connect(whaleOwner).unwrapAll()
+
+       // Tests
+
+      assert.equal(toNumber(await wrapperContract.balanceOf(whaleOwnerAddress)), 0, 'Wrapper did not burn correct number of tokens')
+      assert.equal(toNumber(await kleinContract.balanceOf(whaleOwnerAddress)), editions.length, 'Klein did clear additions for record owner')
+      assert.equal(toNumber(await kleinContract.balanceOf(wrapperContract.address)), 0, 'Klein did not assign all editions away from wrapper contract')
+
+      for (let edition of editions){
+        try {
+          await wrapperContract.ownerOf(editions)
+          assert(false,'Wrapper contract did not burn correctly')
+        } catch(e){
+          assert.isDefined(e)
+        }
+
+        assert.equal((await kleinContract.records(edition)).addr.toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Klein did not assign edition ownership to Wrapper')
+      }
+
+      })
+  })
 });

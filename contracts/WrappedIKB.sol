@@ -27,7 +27,7 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
   }
 
   /**
-   * Override isApprovedForAll to whitelist user's OpenSea proxy accounts to enable gas-less listings.
+   * Override isApprovedForAll to whitelist proxy accounts to enable gas-less listings on Open Sea
    */
   function isApprovedForAll(address owner, address operator)
       public
@@ -75,9 +75,13 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
   function unwrapAll() public returns (bool){
     uint256 balance = balanceOf(_msgSender());
 
+    uint[] memory tokenIds = new uint[](balance);
+
     for (uint256 i = 0; i < balance; i++){
-      require(_transferAndBurn(tokenOfOwnerByIndex(_msgSender(), i)));
+      tokenIds[i] = (tokenOfOwnerByIndex(_msgSender(), i));
     }
+
+    return unwrapSpecific(tokenIds);
   }
 
 
@@ -86,13 +90,10 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
 
     for (uint256 i = 0; i < tokenIdsLen; i++){
       require(ownerOf(_tokenIds[i]) == _msgSender(), "WrappedIKB: Token not owned by sender");
-      require(_transferAndBurn(_tokenIds[i]));
+      require(Klein.specificTransfer(_msgSender(), _tokenIds[i]), "WrappedIKB: Token transfer failed");
+      burn(_tokenIds[i]);
     }
-  }
 
-  function _transferAndBurn(uint256 _tokenId) internal returns (bool){
-    require(Klein.transfer(_msgSender(), _tokenId), "WrappedIKB: Token transfer failed");
-    burn(_tokenId);
     return true;
   }
 
