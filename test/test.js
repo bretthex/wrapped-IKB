@@ -3,6 +3,8 @@ const { assert } = require("chai");
 let kleinContract
 let wrapperContract
 let whaleOwnerAddress = "0x00d7e4903c6d88deeb29eecd9e7e853a31c46554"
+let registryAddress = "0x0000000000000000000000000000000000000001"
+
 async function impersonate(address){
   await network.provider.request({
     method: "hardhat_impersonateAccount",
@@ -42,7 +44,7 @@ async function attachKlein(){
 
 async function deployWrapper(){
   const WrappedIKB = await ethers.getContractFactory("WrappedIKB");
-  wrapperContract = await WrappedIKB.deploy();
+  wrapperContract = await WrappedIKB.deploy(registryAddress);
 }
 
 async function getDefaultProvider(){

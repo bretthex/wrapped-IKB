@@ -1,13 +1,50 @@
 pragma solidity ^0.7.6;
 
+import "@openzeppelin/contracts/token/ERC721/ERC721Burnable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IKlein.sol";
 
-contract WrappedIKB is ERC721 {
+contract OwnableDelegateProxy {}
+
+contract ProxyRegistry {
+    mapping(address => OwnableDelegateProxy) public proxies;
+}
+
+contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
   address public constant IKBAddress = 0x88AE96845e157558ef59e9Ff90E766E22E480390;
+
   IKlein public constant Klein = IKlein(IKBAddress);
 
-  constructor() ERC721("WrappedIKB", "wIKB") {}
+  address[] public proxyRegistryAddresses;
+
+  constructor(address _openSeaProxyRegistryAddress)
+    ERC721("WrappedIKB", "wIKB")
+    Ownable()
+    public
+  {
+    proxyRegistryAddresses.push(_openSeaProxyRegistryAddress);
+  }
+
+  /**
+   * Override isApprovedForAll to whitelist user's OpenSea proxy accounts to enable gas-less listings.
+   */
+  function isApprovedForAll(address owner, address operator)
+      public
+      override
+      view
+      returns (bool)
+  {
+      uint proxyRegistryAddressesLen = proxyRegistryAddresses.length;
+      for (uint i; i < proxyRegistryAddressesLen; i++){
+        ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddresses[i]);
+        if (address(proxyRegistry.proxies(owner)) == operator) {
+            return true;
+        }
+      }
+
+      return super.isApprovedForAll(owner, operator);
+  }
 
   function wrapAll() public returns (bool){
     uint256[] memory ownedRecords = Klein.getHolderEditions(msg.sender);
