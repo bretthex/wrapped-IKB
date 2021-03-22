@@ -71,8 +71,28 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
 
     return true;
   }
-    }
 
+  function unwrapAll() public returns (bool){
+    uint256 balance = balanceOf(_msgSender());
+
+    for (uint256 i = 0; i < balance; i++){
+      require(_transferAndBurn(tokenOfOwnerByIndex(_msgSender(), i)));
+    }
+  }
+
+
+  function unwrapSpecific(uint[] memory _tokenIds) public returns (bool){
+    uint256 tokenIdsLen = _tokenIds.length;
+
+    for (uint256 i = 0; i < tokenIdsLen; i++){
+      require(ownerOf(_tokenIds[i]) == _msgSender(), "WrappedIKB: Token not owned by sender");
+      require(_transferAndBurn(_tokenIds[i]));
+    }
+  }
+
+  function _transferAndBurn(uint256 _tokenId) internal returns (bool){
+    require(Klein.transfer(_msgSender(), _tokenId), "WrappedIKB: Token transfer failed");
+    burn(_tokenId);
     return true;
   }
 
