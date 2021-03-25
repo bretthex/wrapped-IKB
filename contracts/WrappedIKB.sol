@@ -1,4 +1,5 @@
 pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721Burnable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -11,7 +12,11 @@ contract ProxyRegistry {
     mapping(address => OwnableDelegateProxy) public proxies;
 }
 
-contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
+contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
+  mapping (uint256 => string) private _tokenURIs;
+
+  string private _baseURI;
+
   address public constant IKBAddress = 0x88AE96845e157558ef59e9Ff90E766E22E480390;
 
   IKlein public constant Klein = IKlein(IKBAddress);
@@ -27,7 +32,7 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
   }
 
   /**
-   * Override isApprovedForAll to whitelist proxy accounts to enable gas-less listings on Open Sea
+   * Override isApprovedForAll to whitelist proxy accounts to enable gas-less listings on Open Sea and other NFT platforms
    */
   function isApprovedForAll(address owner, address operator)
       public
@@ -61,10 +66,10 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
     return true;
   }
 
-  function wrapSpecific(uint[] memory _editions) public returns (bool){
-    for (uint i = 0; i < _editions.length; i++){
-      require(Klein.specificTransferFrom(_msgSender(), address(this), _editions[i]), "WrappedIKB: IKB Token did not specificTransferFrom");
-      _safeMint(_msgSender(), _editions[i]);
+  function wrapSpecific(uint[] memory editions) public returns (bool){
+    for (uint i = 0; i < editions.length; i++){
+      require(Klein.specificTransferFrom(_msgSender(), address(this), editions[i]), "WrappedIKB: IKB Token did not specificTransferFrom");
+      _safeMint(_msgSender(), editions[i]);
     }
 
     return true;
@@ -83,15 +88,50 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
   }
 
 
-  function unwrapSpecific(uint[] memory _tokenIds) public returns (bool){
-
-    for (uint256 i = 0; i < _tokenIds.length; i++){
-      require(ownerOf(_tokenIds[i]) == _msgSender(), "WrappedIKB: Token not owned by sender");
-      require(Klein.specificTransfer(_msgSender(), _tokenIds[i]), "WrappedIKB: Token transfer failed");
-      burn(_tokenIds[i]);
+  function unwrapSpecific(uint[] memory tokenIds) public returns (bool){
+    for (uint256 i = 0; i < tokenIds.length; i++){
+      require(ownerOf(tokenIds[i]) == _msgSender(), "WrappedIKB: Token not owned by sender");
+      require(Klein.specificTransfer(_msgSender(), tokenIds[i]), "WrappedIKB: Token transfer failed");
+      burn(tokenIds[i]);
     }
 
     return true;
+  }
+
+  function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal override {
+      _tokenURIs[tokenId] = _tokenURI;
+  }
+
+  function setTokenUri(uint256 tokenId, string memory tokenURI)
+    public
+    onlyOwner
+    returns (bool)
+  {
+    require(bytes(_tokenURIs[tokenId]).length == 0, 'WrappedIKB: tokenUri has already been set');
+
+    require(tokenId == 0 || bytes(_tokenURIs[tokenId-1]).length > 0, 'WrappedIKB: tokenUri must be set sequentially');
+
+    _setTokenURI(tokenId, tokenURI);
+
+    return true;
+  }
+
+  function setTokenURIs(uint[] memory tokenIds, string[] memory tokenURIs)
+    public
+    onlyOwner
+    returns (bool)
+  {
+    require(tokenIds.length == tokenURIs.length, 'WrappedIKB: tokenIds and tokenURIs must be the same length');
+
+    for (uint256 i; i < tokenIds.length; i++){
+      setTokenUri(tokenIds[i], tokenURIs[i]);
+    }
+
+    return true;
+  }
+
+  function revealTokenUri(uint256 tokenId) public view onlyOwner returns(string memory tokenUri){
+    return _tokenURIs[tokenId];
   }
 
 }

@@ -48,7 +48,11 @@ async function deployWrapper(){
 }
 
 async function getDefaultProvider(){
-  return (await ethers.getSigners())[0].provider
+  return (await getDefaultSigner()).provider
+}
+
+async function getDefaultSigner(){
+  return (await ethers.getSigners())[0]
 }
 
 async function getSigner(address){
@@ -92,7 +96,7 @@ describe("IKB Wrapper", function() {
           await wrapperContract.ownerOf(edition)
           throw new Error(`Wrapper has edition ${edition} minted`)
         } catch(e){
-          assert.isDefined(e)
+          assert(/owner query for nonexistent token/.test(e.message),`Incorrect error. Got ${e.message}`)
         }
       }
 
@@ -102,7 +106,7 @@ describe("IKB Wrapper", function() {
         await wrapperContract.connect(whaleOwner).wrapAll()
         throw new Error('Wrapper expected to throw before approval')
       } catch(e){
-        assert.isDefined(e)
+        assert(/must approve all IKB tokens to be transfered/.test(e.message),`Incorrect error. Got ${e.message}`)
       }
 
       await kleinContract.connect(whaleOwner).approve(wrapperContract.address, editions.length)
@@ -180,9 +184,9 @@ describe("IKB Wrapper", function() {
       for (let edition of editions){
         try {
           await wrapperContract.ownerOf(editions)
-          assert(false,'Wrapper contract did not burn correctly')
+          assert.fail('Wrapper contract did not burn correctly')
         } catch(e){
-          assert.isDefined(e)
+          assert(/owner query for nonexistent token/.test(e.message),`Incorrect error. Got ${e.message}`)
         }
 
         assert.equal((await kleinContract.records(edition)).addr.toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Klein did not assign edition ownership to Wrapper')
@@ -219,10 +223,10 @@ describe("IKB Wrapper", function() {
 
         for (let edition of specificEditions){
           try {
-            await wrapperContract.ownerOf(editions)
-            assert(false,'Wrapper contract did not burn correctly')
+            await wrapperContract.ownerOf(edition)
+            assert.fail('Wrapper contract did not burn correctly')
           } catch(e){
-            assert.isDefined(e)
+            assert(/owner query for nonexistent token/.test(e.message),`Incorrect error. Got ${e.message}`)
           }
 
           assert.equal((await kleinContract.records(edition)).addr.toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Klein did not assign edition ownership to Wrapper')
@@ -260,15 +264,124 @@ describe("IKB Wrapper", function() {
 
         for (let edition of specificEditions){
           try {
-            await wrapperContract.ownerOf(editions)
-            assert(false,'Wrapper contract did not burn correctly')
+            await wrapperContract.ownerOf(edition)
+            assert.fail('Wrapper contract did not burn correctly')
           } catch(e){
-            assert.isDefined(e)
+            assert(/owner query for nonexistent token/.test(e.message),`Incorrect error. Got ${e.message}`)
           }
 
           assert.equal((await kleinContract.records(edition)).addr.toLowerCase(), whaleOwnerAddress.toLowerCase(), 'Klein did not assign edition ownership to Wrapper')
         }
 
      })
+  })
+
+  describe("setTokenURI", function(){
+    const TOKENURI = "ABC"
+    describe('when tokenURI is 0 and not set and called by owner', function(){
+      it('should work', async function(){
+        await wrapperContract.setTokenUri(0, TOKENURI)
+        assert.equal( await wrapperContract.revealTokenUri(0), TOKENURI)
+      })
+    })
+    describe('when tokenURI is sequential and not set and called by owner', function(){
+      it('should work', async function(){
+        await wrapperContract.setTokenUri(0, TOKENURI)
+        await wrapperContract.setTokenUri(1, TOKENURI)
+        assert.equal( await wrapperContract.revealTokenUri(1), TOKENURI)
+      })
+    })
+    describe('when tokenURI is set', function(){
+      it('should fail', async function(){
+        await wrapperContract.setTokenUri(0, TOKENURI)
+        try {
+          await wrapperContract.setTokenUri(0, TOKENURI)
+        } catch(e){
+          assert(/already been set/.test(e.message),`Incorrect error. Got ${e.message}`)
+          return
+        }
+        assert.fail('Wrapper contract should have thrown')
+      })
+    })
+
+    describe('when tokenURI is not sequential', function(){
+      it('should fail', async function(){
+        try {
+          await wrapperContract.setTokenUri(22, TOKENURI)
+        } catch(e){
+          assert(/sequentially/.test(e.message),`Incorrect error. Got ${e.message}`)
+          return
+        }
+
+        assert.fail('Wrapper contract should have thrown')
+      })
+    })
+
+    describe('when not called by owner', function(){
+      it('should fail', async function(){
+        try {
+          await wrapperContract.connect(await getSigner(whaleOwnerAddress)).setTokenUri(0, TOKENURI)
+        } catch(e){
+          assert(/caller is not the owner/.test(e.message),`Incorrect error. Got ${e.message}`)
+          return
+        }
+        assert.fail('Wrapper contract should have thrown')
+      })
+    })
+  })
+
+  describe("setTokenURIs", function(){
+    const TOKENURIS = ["ABC","DEF"]
+    describe('when tokenURI is 0 and not set and called by owner', function(){
+      it('should work', async function(){
+        await wrapperContract.setTokenURIs([0], [TOKENURIS[0]])
+        assert.equal( await wrapperContract.revealTokenUri(0), TOKENURIS[0])
+      })
+    })
+    describe('when tokenURIs are sequential and not set and called by owner', function(){
+      it('should work', async function(){
+        await wrapperContract.setTokenURIs([0], [TOKENURIS[0]])
+        await wrapperContract.setTokenURIs([1,2], TOKENURIS)
+        assert.equal( await wrapperContract.revealTokenUri(1), TOKENURIS[0])
+        assert.equal( await wrapperContract.revealTokenUri(2), TOKENURIS[1])
+      })
+    })
+    describe('when tokenURI is set', function(){
+      it('should fail', async function(){
+        await wrapperContract.setTokenURIs([0], [TOKENURIS[0]])
+        try {
+          await wrapperContract.setTokenURIs([0], [TOKENURIS[0]])
+        } catch(e){
+          assert(/already been set/.test(e.message),`Incorrect error. Got ${e.message}`)
+          return
+        }
+        assert.fail('Wrapper contract should have thrown')
+      })
+    })
+
+    describe('when tokenURI is not sequential', function(){
+      it('should fail', async function(){
+        try {
+          await wrapperContract.setTokenURIs([11,12], TOKENURIS)
+        } catch(e){
+          assert(/sequentially/.test(e.message),`Incorrect error. Got ${e.message}`)
+          return
+        }
+
+        assert.fail('Wrapper contract should have thrown')
+      })
+    })
+
+    describe('when not called by owner', function(){
+      it('should fail', async function(){
+        try {
+          await wrapperContract.connect(await getSigner(whaleOwnerAddress)).setTokenURIs([0,1], TOKENURIS)
+        } catch(e){
+          assert(/caller is not the owner/.test(e.message),`Incorrect error. Got ${e.message}`)
+          return
+        }
+        assert.fail('Wrapper contract should have thrown')
+      })
+    })
   })
 });
