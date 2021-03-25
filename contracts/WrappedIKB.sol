@@ -62,9 +62,7 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
   }
 
   function wrapSpecific(uint[] memory _editions) public returns (bool){
-    uint editionsLen = _editions.length;
-
-    for (uint i = 0; i < editionsLen; i++){
+    for (uint i = 0; i < _editions.length; i++){
       require(Klein.specificTransferFrom(_msgSender(), address(this), _editions[i]), "WrappedIKB: IKB Token did not specificTransferFrom");
       _safeMint(_msgSender(), _editions[i]);
     }
@@ -86,9 +84,8 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable{
 
 
   function unwrapSpecific(uint[] memory _tokenIds) public returns (bool){
-    uint256 tokenIdsLen = _tokenIds.length;
 
-    for (uint256 i = 0; i < tokenIdsLen; i++){
+    for (uint256 i = 0; i < _tokenIds.length; i++){
       require(ownerOf(_tokenIds[i]) == _msgSender(), "WrappedIKB: Token not owned by sender");
       require(Klein.specificTransfer(_msgSender(), _tokenIds[i]), "WrappedIKB: Token transfer failed");
       burn(_tokenIds[i]);
