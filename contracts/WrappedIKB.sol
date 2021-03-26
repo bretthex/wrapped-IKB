@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 
@@ -9,7 +11,7 @@ import "./IKlein.sol";
 contract OwnableDelegateProxy {}
 
 contract ProxyRegistry {
-    mapping(address => OwnableDelegateProxy) public proxies;
+  mapping(address => OwnableDelegateProxy) public proxies;
 }
 
 contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
@@ -17,40 +19,139 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
 
   string private _baseURI;
 
-  address public constant IKBAddress = 0x88AE96845e157558ef59e9Ff90E766E22E480390;
+  string private _contractURI;
 
-  IKlein public constant Klein = IKlein(IKBAddress);
+  address public immutable IKBAddress;
 
-  address[] public proxyRegistryAddresses;
+  IKlein public immutable Klein;
 
-  constructor(address _openSeaProxyRegistryAddress)
+  address public proxyRegistryAddress;
+
+  constructor(address _IKBAddress, address _proxyRegistryAddress)
     ERC721("WrappedIKB", "wIKB")
     Ownable()
     public
   {
-    proxyRegistryAddresses.push(_openSeaProxyRegistryAddress);
+    IKBAddress = _IKBAddress;
+    Klein = IKlein(_IKBAddress);
+    proxyRegistryAddress = _proxyRegistryAddress;
+  }
+
+  /**************************************************************************
+   * Opensea-specific methods
+   *************************************************************************/
+
+  function contractURI() external view returns (string memory) {
+      return _contractURI;
   }
 
   /**
-   * Override isApprovedForAll to whitelist proxy accounts to enable gas-less listings on Open Sea and other NFT platforms
+   * @dev Sets `_contractURI` once..
+   *
+   * Requirements:
+   *
+   * - `_contractURI` must not be set
    */
-  function isApprovedForAll(address owner, address operator)
-      public
-      override
-      view
-      returns (bool)
-  {
-      uint proxyRegistryAddressesLen = proxyRegistryAddresses.length;
-      for (uint i; i < proxyRegistryAddressesLen; i++){
-        ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddresses[i]);
-        if (address(proxyRegistry.proxies(owner)) == operator) {
-            return true;
-        }
-      }
-
-      return super.isApprovedForAll(owner, operator);
+  function setContractURI(string memory contractURI) public onlyOwner returns (bool){
+    require(bytes(_contractURI).length == 0, 'WrappedIKB: contractURI already set');
+    require(bytes(contractURI).length == 0, 'WrappedIKB: contractURI string cannot be blank');
+    _contractURI = contractURI;
+    return true;
   }
 
+  /**
+   * Override isApprovedForAll to whitelist user's OpenSea proxy accounts to enable gas-less listings.
+   */
+  function isApprovedForAll(address owner, address operator)
+    public
+    override
+    view
+    returns (bool)
+  {
+    // Whitelist OpenSea proxy contract for easy trading.
+    ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddress);
+    if (address(proxyRegistry.proxies(owner)) == operator) {
+        return true;
+    }
+
+    return super.isApprovedForAll(owner, operator);
+  }
+
+  /**************************************************************************
+    * ERC721 methods
+    *************************************************************************/
+
+  /**
+    * @dev Allows owner to set `_baseURI`
+  */
+  function setbaseURI(string memory baseURI) public onlyOwner {
+    _setBaseURI(baseURI);
+  }
+
+  /**
+    * @dev Modifies Open Zeppelin standard `_setTokenURI` to not require `tokenId` to exist
+  */
+  function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal override {
+      _tokenURIs[tokenId] = _tokenURI;
+  }
+
+  /**
+   * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
+   *
+   * Requirements:
+   *
+   * - The `tokenURI` of `tokenId` must not exist. It can only be set once.
+   * - `tokenId` must be sequential. The previous `tokenUri` for `tokenId - 1` must exist.
+   */
+  function setTokenUri(uint256 tokenId, string memory _tokenURI)
+    public
+    onlyOwner
+  {
+    require(bytes(_tokenURIs[tokenId]).length == 0, 'WrappedIKB: tokenUri has already been set');
+
+    require(tokenId == 0 || bytes(_tokenURIs[tokenId-1]).length > 0, 'WrappedIKB: tokenUri must be set sequentially');
+
+    _setTokenURI(tokenId, _tokenURI);
+  }
+
+  /**
+   * @dev Convenience function to batch set tokenURIs.
+  */
+  function setTokenURIs(uint[] memory tokenIds, string[] memory tokenURIs)
+    public
+    onlyOwner
+  {
+    require(tokenIds.length == tokenURIs.length, 'WrappedIKB: tokenIds and tokenURIs must be the same length');
+
+    for (uint256 i; i < tokenIds.length; i++){
+      setTokenUri(tokenIds[i], tokenURIs[i]);
+    }
+  }
+
+  /**
+   * @dev `tokenURIs` is private but it's helpful for owner to check the
+   * `tokenURI` of a `tokenId` when `tokenId` is not minted yet by its owner.
+  */
+  function tokenURIs(uint256 tokenId) public view onlyOwner returns(string memory tokenURI){
+    return _tokenURIs[tokenId];
+  }
+
+
+  /**************************************************************************
+   * WrappedIKB-specific methods
+   *************************************************************************/
+
+  /**
+   * @dev Uses `transferFrom` to transer all IKB Tokens from `msg.sender` to
+   * this wrapper. Once the wrapper owns all editions, it mints new tokens with
+   * the same `id` and sets `msg.sender` as the owner.
+   *
+   * Requirements:
+   *
+   * - All IKB tokens owned by `msg.sender` must be allowed to be transfered by WrappedIKB.
+   *   To do this, call `approve()` with the address of WrappedIKB and the current
+   *   balance of the owner
+  */
   function wrapAll() public returns (bool){
     uint256[] memory ownedRecords = Klein.getHolderEditions(_msgSender());
     uint ownedRecordsLength = ownedRecords.length;
@@ -66,6 +167,18 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
     return true;
   }
 
+  /**
+   * @dev Uses `specificTransferFrom` to transer specific IKB Token editions from
+   * `msg.sender` to this wrapper. Once the wrapper owns the specified editions,
+   *  it mints new tokens with
+   * the same `id` and sets `msg.sender` as the owner.
+   *
+   * Requirements:
+   *
+   * - None. There is no way to check if the IKB contract allows a specific transfer.
+   *   The transfer will fail on the IKB contract `specificApprove()` is not called\
+   *   with the correct editions.
+  */
   function wrapSpecific(uint[] memory editions) public returns (bool){
     for (uint i = 0; i < editions.length; i++){
       require(Klein.specificTransferFrom(_msgSender(), address(this), editions[i]), "WrappedIKB: IKB Token did not specificTransferFrom");
@@ -75,7 +188,28 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
     return true;
   }
 
-  function unwrapAll() public returns (bool){
+  /**
+   * @dev Transfers the specified IKB token editions back to `msg.sender`
+   * and burns the corresponding WrappedIKB tokens
+   *
+   * Requirements:
+   *
+   * - `msg.sender` must be the owner of the WrappedIKB tokens
+  */
+  function unwrapSpecific(uint[] memory tokenIds) public{
+    for (uint256 i = 0; i < tokenIds.length; i++){
+      require(ownerOf(tokenIds[i]) == _msgSender(), "WrappedIKB: Token not owned by sender");
+      require(Klein.specificTransfer(_msgSender(), tokenIds[i]), "WrappedIKB: Token transfer failed");
+      burn(tokenIds[i]);
+    }
+  }
+
+  /**
+   * @dev Convenience function transfers all IKB token editions back to
+   * `msg.sender` and burns the corresponding WrappedIKB tokens.
+   * See `unwrapSpecific()` for implementation.
+  */
+  function unwrapAll() public{
     uint256 balance = balanceOf(_msgSender());
 
     uint[] memory tokenIds = new uint[](balance);
@@ -88,50 +222,5 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
   }
 
 
-  function unwrapSpecific(uint[] memory tokenIds) public returns (bool){
-    for (uint256 i = 0; i < tokenIds.length; i++){
-      require(ownerOf(tokenIds[i]) == _msgSender(), "WrappedIKB: Token not owned by sender");
-      require(Klein.specificTransfer(_msgSender(), tokenIds[i]), "WrappedIKB: Token transfer failed");
-      burn(tokenIds[i]);
-    }
-
-    return true;
-  }
-
-  function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal override {
-      _tokenURIs[tokenId] = _tokenURI;
-  }
-
-  function setTokenUri(uint256 tokenId, string memory tokenURI)
-    public
-    onlyOwner
-    returns (bool)
-  {
-    require(bytes(_tokenURIs[tokenId]).length == 0, 'WrappedIKB: tokenUri has already been set');
-
-    require(tokenId == 0 || bytes(_tokenURIs[tokenId-1]).length > 0, 'WrappedIKB: tokenUri must be set sequentially');
-
-    _setTokenURI(tokenId, tokenURI);
-
-    return true;
-  }
-
-  function setTokenURIs(uint[] memory tokenIds, string[] memory tokenURIs)
-    public
-    onlyOwner
-    returns (bool)
-  {
-    require(tokenIds.length == tokenURIs.length, 'WrappedIKB: tokenIds and tokenURIs must be the same length');
-
-    for (uint256 i; i < tokenIds.length; i++){
-      setTokenUri(tokenIds[i], tokenURIs[i]);
-    }
-
-    return true;
-  }
-
-  function revealTokenUri(uint256 tokenId) public view onlyOwner returns(string memory tokenUri){
-    return _tokenURIs[tokenId];
-  }
 
 }

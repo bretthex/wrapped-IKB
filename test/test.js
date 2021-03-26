@@ -1,6 +1,7 @@
 const { assert } = require("chai");
 
 let kleinContract
+let kleinAddress = "0x88AE96845e157558ef59e9Ff90E766E22E480390"
 let wrapperContract
 let whaleOwnerAddress = "0x00d7e4903c6d88deeb29eecd9e7e853a31c46554"
 let registryAddress = "0x0000000000000000000000000000000000000001"
@@ -44,7 +45,7 @@ async function attachKlein(){
 
 async function deployWrapper(){
   const WrappedIKB = await ethers.getContractFactory("WrappedIKB");
-  wrapperContract = await WrappedIKB.deploy(registryAddress);
+  wrapperContract = await WrappedIKB.deploy(kleinAddress, registryAddress);
 }
 
 async function getDefaultProvider(){
@@ -281,14 +282,14 @@ describe("IKB Wrapper", function() {
     describe('when tokenURI is 0 and not set and called by owner', function(){
       it('should work', async function(){
         await wrapperContract.setTokenUri(0, TOKENURI)
-        assert.equal( await wrapperContract.revealTokenUri(0), TOKENURI)
+        assert.equal( await wrapperContract.tokenURIs(0), TOKENURI)
       })
     })
     describe('when tokenURI is sequential and not set and called by owner', function(){
       it('should work', async function(){
         await wrapperContract.setTokenUri(0, TOKENURI)
         await wrapperContract.setTokenUri(1, TOKENURI)
-        assert.equal( await wrapperContract.revealTokenUri(1), TOKENURI)
+        assert.equal( await wrapperContract.tokenURIs(1), TOKENURI)
       })
     })
     describe('when tokenURI is set', function(){
@@ -335,15 +336,15 @@ describe("IKB Wrapper", function() {
     describe('when tokenURI is 0 and not set and called by owner', function(){
       it('should work', async function(){
         await wrapperContract.setTokenURIs([0], [TOKENURIS[0]])
-        assert.equal( await wrapperContract.revealTokenUri(0), TOKENURIS[0])
+        assert.equal( await wrapperContract.tokenURIs(0), TOKENURIS[0])
       })
     })
     describe('when tokenURIs are sequential and not set and called by owner', function(){
       it('should work', async function(){
         await wrapperContract.setTokenURIs([0], [TOKENURIS[0]])
         await wrapperContract.setTokenURIs([1,2], TOKENURIS)
-        assert.equal( await wrapperContract.revealTokenUri(1), TOKENURIS[0])
-        assert.equal( await wrapperContract.revealTokenUri(2), TOKENURIS[1])
+        assert.equal( await wrapperContract.tokenURIs(1), TOKENURIS[0])
+        assert.equal( await wrapperContract.tokenURIs(2), TOKENURIS[1])
       })
     })
     describe('when tokenURI is set', function(){
