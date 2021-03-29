@@ -52,11 +52,10 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
    *
    * - `_contractURI` must not be set
    */
-  function setContractURI(string memory contractURI) public onlyOwner returns (bool){
+  function setContractURI(string memory contractURI_) public onlyOwner {
     require(bytes(_contractURI).length == 0, 'WrappedIKB: contractURI already set');
-    require(bytes(contractURI).length == 0, 'WrappedIKB: contractURI string cannot be blank');
-    _contractURI = contractURI;
-    return true;
+    require(bytes(contractURI_).length != 0, 'WrappedIKB: new contractURI string cannot be blank');
+    _contractURI = contractURI_;
   }
 
   /**
@@ -117,14 +116,14 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
   /**
    * @dev Convenience function to batch set tokenURIs.
   */
-  function setTokenURIs(uint[] memory tokenIds, string[] memory tokenURIs)
+  function setTokenURIs(uint[] memory tokenIds_, string[] memory tokenURIs_)
     public
     onlyOwner
   {
-    require(tokenIds.length == tokenURIs.length, 'WrappedIKB: tokenIds and tokenURIs must be the same length');
+    require(tokenIds_.length == tokenURIs_.length, 'WrappedIKB: tokenIds and tokenURIs must be the same length');
 
-    for (uint256 i; i < tokenIds.length; i++){
-      setTokenUri(tokenIds[i], tokenURIs[i]);
+    for (uint256 i; i < tokenIds_.length; i++){
+      setTokenUri(tokenIds_[i], tokenURIs_[i]);
     }
   }
 
