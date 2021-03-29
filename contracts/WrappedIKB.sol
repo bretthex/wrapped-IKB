@@ -3,16 +3,9 @@
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721Burnable.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./ERC721.sol";
 import "./IKlein.sol";
-
-contract OwnableDelegateProxy {}
-
-contract ProxyRegistry {
-  mapping(address => OwnableDelegateProxy) public proxies;
-}
+import "./ProxyRegistry.sol";
 
 contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
   mapping (uint256 => string) private _tokenURIs;
