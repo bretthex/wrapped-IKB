@@ -371,4 +371,50 @@ describe("IKB Wrapper", function() {
       })
     })
   })
+
+  describe("setContractURI", function(){
+    const CONTRACTURI = "ABC"
+    describe('when not called by owner', function(){
+      it('should fail', async function(){
+        try {
+          await wrapperContract.connect(await getSigner(whaleOwnerAddress)).setContractURI(CONTRACTURI)
+        } catch(e){
+          assert(/caller is not the owner/.test(e.message),`Incorrect error. Got ${e.message}`)
+          return
+        }
+        assert.fail('Wrapper contract should have thrown')
+      })
+    })
+    describe('when called by the owner', function(){
+      describe('when passed in contractURI is empty', function(){
+        it('should fail', async function(){
+          try {
+            await wrapperContract.setContractURI("")
+          } catch(e){
+            assert(/new contractURI string cannot be blank/.test(e.message),`Incorrect error. Got ${e.message}`)
+            return
+          }
+          assert.fail('Wrapper contract should have thrown')
+        })
+      })
+      describe('when contractURI is not set', function(){
+        it('should work', async function(){
+          await wrapperContract.setContractURI(CONTRACTURI)
+          assert.equal( await wrapperContract.contractURI(), CONTRACTURI)
+        })
+      })
+      describe('when passed in contractURI is not empty', function(){
+        it('should fail', async function(){
+          await wrapperContract.setContractURI(CONTRACTURI)
+          try {
+            await wrapperContract.setContractURI(CONTRACTURI)
+          } catch(e){
+            assert(/contractURI already set/.test(e.message),`Incorrect error. Got ${e.message}`)
+            return
+          }
+          assert.fail('Wrapper contract should have thrown')
+        })
+      })
+    })
+  })
 });
