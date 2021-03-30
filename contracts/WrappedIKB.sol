@@ -8,9 +8,42 @@ import "./IKlein.sol";
 import "./ProxyRegistry.sol";
 
 contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
-  mapping (uint256 => string) private _tokenURIs;
 
-  string private _baseURI;
+  string[31] private _tokenIpfsHashes = [
+    "QmQEenaUuoprk4JfQCKCmPjkrEGQM2z3S89y4A36hNo95S",
+    "QmQzVQYds86WAwo8mmvuDLSzkty5QkACxpspQenWbsz826",
+    "Qma9FknpYaRP6ddRKrNjFhefkqJoeA61DtAYFgrwU9gYiW",
+    "QmcVBK4oJ24MnioHdSB7bPh5JvYhfVVbCuuuogukxVPrt4",
+    "QmURnFyxP2ePX3u8nKbwTdzh4rk8amjvBXdTFqhYaTU378",
+    "QmaBxi6P6aLrrPbF3mqDcwCa3xjojM7o7UcibCJSvUeh3g",
+    "QmVx3DXTfk13PmCrtbrFzZnuC8JR4egatkJBLEccfXj8vD",
+    "QmZxAxk7NpbsBGjkbHBZ4dtadqPwXxHijUUY1sKAfxa6AW",
+    "QmQNju3sAZ4YsZV77cco6ceZ4ThuBfzevfHmnob2Fn7qX6",
+    "QmQRTwNSXbq5p6nvPKxeCdPgXujzMzBr2tQh2TdMpcbxbT",
+    "QmP85Dts6rbbnDYahmq8dgV3fmPdvHdpQ8xdw6zY8VsMXr",
+    "QmSJVnbrEhbpALE3CXho9t9mqG8ShBeGE3h8eAYHTS2zXG",
+    "QmdHCAfrVr3a1YNDwiXFe9xWRQP2rwfULW4oiMPAMUbEJk",
+    "QmduaZxbBdz5UbYemGNaAoV852Jz8SCNBmr2nenVvXp2T5",
+    "QmVuEbj997T7s6xs4ceHxYFp6p9KbHKeFPPcqtULLufKny",
+    "QmY6DUND3f4iffPGPDBGoT7cdLPu865e5SQJ5nnuEbMdiJ",
+    "QmRsfyjmcuo6sfZHBmXysGPHHCVJDQ89xpYL41qXVQN8hg",
+    "QmWbbKDQJYPtKHmzYVhiVKC3wnmpfotj87onytJiwyEt8C",
+    "QmUoVf3qZ5rXwwVA4EEKk4Ty1VMxEA6EABxLezgVqzez9G",
+    "QmP8UbVA1MgXCTfjTyAxyCrSxLY9fmgBtwR3rhG3aMpZYS",
+    "QmZetbktBG87z3KzH8hnLWAPWNd97fqyp6XkiKmCQLJchB",
+    "QmYzrbBz9GvApXFqkPiVrPxc9CmkJ2ewrqe3vX79hwZeBH",
+    "QmNzBC199dQq44H5ZVRdqEnMQ5BqQ9CiJD4JumPcq9djui",
+    "QmZZ1RBgXjcHDPrByZDNZRN14AS56GW17NCVJ3Nvt4qQdJ",
+    "QmegfPLVFaUW2z8deEPQJ85yZHHfiBtSBAiZRzm5qN3wjt",
+    "QmPueCcfMDhEnSEPPFwqteKWpU9kh9Y33EN8GPjBUkhhaC",
+    "QmPdzjpaXKb3yYkuAE9jGAmgkfDeQBoDSExF2L5HK4xs4U",
+    "QmTva7GEyG4hD5EnYYSNFkmtpXWxRNAZTKx1fAgooyG6qV",
+    "QmaKW3uqAFPnEyX2zkK4Qf7KbM9aiX3wZJUGf8VeuRUdsx",
+    "QmWFhX51KvQXKPuqEjfYmDLUFJbHUUwPin9mfSKNXUnPr5",
+    "QmdEudtvKgArPoQgE7uKi3DBmpZrvMvcqTyF9b7rpnxL1C"
+  ];
+
+  string private _baseURI = "https://ipfs.io/ipfs/";
 
   string private _contractURI;
 
@@ -74,6 +107,15 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
     *************************************************************************/
 
   /**
+  * @dev Returns the base URI set via {_setBaseURI}. This will be
+  * automatically added as a prefix in {tokenURI} to each token's URI, or
+  * to the token ID if no specific URI is set for that token ID.
+  */
+  function baseURI() public view override returns (string memory) {
+      return _baseURI;
+  }
+
+  /**
     * @dev Allows owner to set `_baseURI`
   */
   function setbaseURI(string memory baseURI) public onlyOwner {
@@ -81,51 +123,23 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
   }
 
   /**
-    * @dev Modifies Open Zeppelin standard `_setTokenURI` to not require `tokenId` to exist
-  */
-  function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal override {
-      _tokenURIs[tokenId] = _tokenURI;
-  }
-
-  /**
-   * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
-   *
-   * Requirements:
-   *
-   * - The `tokenURI` of `tokenId` must not exist. It can only be set once.
-   * - `tokenId` must be sequential. The previous `tokenUri` for `tokenId - 1` must exist.
-   */
-  function setTokenUri(uint256 tokenId, string memory _tokenURI)
-    public
-    onlyOwner
-  {
-    require(bytes(_tokenURIs[tokenId]).length == 0, 'WrappedIKB: tokenUri has already been set');
-
-    require(tokenId == 0 || bytes(_tokenURIs[tokenId-1]).length > 0, 'WrappedIKB: tokenUri must be set sequentially');
-
-    _setTokenURI(tokenId, _tokenURI);
-  }
-
-  /**
-   * @dev Convenience function to batch set tokenURIs.
-  */
-  function setTokenURIs(uint[] memory tokenIds_, string[] memory tokenURIs_)
-    public
-    onlyOwner
-  {
-    require(tokenIds_.length == tokenURIs_.length, 'WrappedIKB: tokenIds and tokenURIs must be the same length');
-
-    for (uint256 i; i < tokenIds_.length; i++){
-      setTokenUri(tokenIds_[i], tokenURIs_[i]);
-    }
-  }
-
-  /**
    * @dev `tokenURIs` is private but it's helpful for owner to check the
    * `tokenURI` of a `tokenId` when `tokenId` is not minted yet by its owner.
   */
-  function tokenURIs(uint256 tokenId) public view onlyOwner returns(string memory tokenURI){
-    return _tokenURIs[tokenId];
+  function tokenIpfsHash(uint256 tokenId) public view returns(string memory tokenURI){
+    return _tokenIpfsHashes[tokenId];
+  }
+
+  /**
+   * @dev See {IERC721Metadata-tokenURI}.
+   */
+  function tokenURI(uint256 tokenId) public view override returns (string memory) {
+      require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+
+      string memory _tokenURI = _tokenIpfsHashes[tokenId];
+      string memory base = baseURI();
+
+      return string(abi.encodePacked(base, _tokenURI));
   }
 
 
