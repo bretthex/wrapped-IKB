@@ -47,7 +47,6 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
 
   string private immutable _contractURI = "";
 
-  address public immutable IKBAddress;
 
   IKlein public immutable Klein;
 
@@ -58,7 +57,6 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
     Ownable()
     public
   {
-    IKBAddress = _IKBAddress;
     Klein = IKlein(_IKBAddress);
     proxyRegistryAddress = _proxyRegistryAddress;
   }
