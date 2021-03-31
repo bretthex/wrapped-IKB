@@ -84,7 +84,7 @@ beforeEach(function(done){
 
 
 describe("IKB Wrapper", function() {
-  describe.skip("wrapAll", function(){
+  describe("wrapAll", function(){
     it("should mint new NFTs for each owned record if all approved", async function() {
       this.timeout(300000)
       const whaleOwner = await getSigner(whaleOwnerAddress)
@@ -124,7 +124,7 @@ describe("IKB Wrapper", function() {
     });
   })
 
-  describe.skip("wrapSpecific", function(){
+  describe("wrapSpecific", function(){
     it("should mint specific approved NFTS", async function(){
       this.timeout(300000)
       const whaleOwner = await getSigner(whaleOwnerAddress)
@@ -150,7 +150,7 @@ describe("IKB Wrapper", function() {
     })
   })
 
-  describe.skip("unwrapAll", function(){
+  describe("unwrapAll", function(){
      it("should transfer back and burn all tokens", async function(){
 
        // Setup
@@ -189,7 +189,7 @@ describe("IKB Wrapper", function() {
       })
   })
 
-  describe.skip("unwrapSpecific", function(){
+  describe("unwrapSpecific", function(){
      it("should transfer back and burn specific tokens after wrap all", async function(){
 
        // Setup
@@ -300,7 +300,7 @@ describe("IKB Wrapper", function() {
     })
   })
 
-  describe.skip("setContractURI", function(){
+  describe("setContractURI", function(){
     const CONTRACTURI = "ABC"
     describe('when not called by owner', function(){
       it('should fail', async function(){
