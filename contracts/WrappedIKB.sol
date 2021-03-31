@@ -131,7 +131,8 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
   }
 
   /**
-   * @dev See {IERC721Metadata-tokenURI}.
+   * @dev Modifies Open Zeppelin's `tokenURI()` to read from `_tokenIpfsHashes`
+   * instead of `_tokenUris`
    */
   function tokenURI(uint256 tokenId) public view override returns (string memory) {
       require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
