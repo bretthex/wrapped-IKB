@@ -118,16 +118,16 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
   /**
     * @dev Allows owner to set `_baseURI`
   */
-  function setbaseURI(string memory baseURI) public onlyOwner {
-    _setBaseURI(baseURI);
+  function setbaseURI(string memory baseURI_) public onlyOwner {
+    _setBaseURI(baseURI_);
   }
 
   /**
    * @dev `tokenURIs` is private but it's helpful for owner to check the
    * `tokenURI` of a `tokenId` when `tokenId` is not minted yet by its owner.
   */
-  function tokenIpfsHash(uint256 tokenId) public view returns(string memory tokenURI){
-    return _tokenIpfsHashes[tokenId];
+  function tokenIpfsHash(uint256 tokenId_) public view returns(string memory){
+    return _tokenIpfsHashes[tokenId_];
   }
 
   /**
