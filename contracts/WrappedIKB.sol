@@ -45,7 +45,7 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
 
   string private _baseURI = "https://ipfs.io/ipfs/";
 
-  string private _contractURI;
+  string private immutable _contractURI = "";
 
   address public immutable IKBAddress;
 
@@ -69,19 +69,6 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
 
   function contractURI() external view returns (string memory) {
       return _contractURI;
-  }
-
-  /**
-   * @dev Sets `_contractURI` once..
-   *
-   * Requirements:
-   *
-   * - `_contractURI` must not be set
-   */
-  function setContractURI(string memory contractURI_) public onlyOwner {
-    require(bytes(_contractURI).length == 0, 'WrappedIKB: contractURI already set');
-    require(bytes(contractURI_).length != 0, 'WrappedIKB: new contractURI string cannot be blank');
-    _contractURI = contractURI_;
   }
 
   /**
