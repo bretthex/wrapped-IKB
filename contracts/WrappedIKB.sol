@@ -9,7 +9,7 @@ import "./ProxyRegistry.sol";
 
 contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
 
-  string[31] private _tokenIPFSHashes = [
+  string[101] private _tokenIPFSHashes = [
     "QmQEenaUuoprk4JfQCKCmPjkrEGQM2z3S89y4A36hNo95S",
     "QmQzVQYds86WAwo8mmvuDLSzkty5QkACxpspQenWbsz826",
     "Qma9FknpYaRP6ddRKrNjFhefkqJoeA61DtAYFgrwU9gYiW",
