@@ -1,4 +1,5 @@
 // Sources flattened with hardhat v2.1.1 https://hardhat.org
+// SPDX-License-Identifier: PREVIOUS OPEN ZEPPELIN LICENSE
 
 // File @openzeppelin/contracts/utils/Context.sol@v3.4.1
 
