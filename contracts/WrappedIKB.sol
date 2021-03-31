@@ -9,7 +9,7 @@ import "./ProxyRegistry.sol";
 
 contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
 
-  string[31] private _tokenIpfsHashes = [
+  string[31] private _tokenIPFSHashes = [
     "QmQEenaUuoprk4JfQCKCmPjkrEGQM2z3S89y4A36hNo95S",
     "QmQzVQYds86WAwo8mmvuDLSzkty5QkACxpspQenWbsz826",
     "Qma9FknpYaRP6ddRKrNjFhefkqJoeA61DtAYFgrwU9gYiW",
@@ -114,17 +114,17 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
    * `tokenURI` of a `tokenId` when `tokenId` is not minted yet by its owner.
   */
   function tokenIpfsHash(uint256 tokenId_) public view returns(string memory){
-    return _tokenIpfsHashes[tokenId_];
+    return _tokenIPFSHashes[tokenId_];
   }
 
   /**
-   * @dev Modifies Open Zeppelin's `tokenURI()` to read from `_tokenIpfsHashes`
+   * @dev Modifies Open Zeppelin's `tokenURI()` to read from `_tokenIPFSHashes`
    * instead of `_tokenUris`
    */
   function tokenURI(uint256 tokenId) public view override returns (string memory) {
       require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
-      string memory _tokenURI = _tokenIpfsHashes[tokenId];
+      string memory _tokenURI = _tokenIPFSHashes[tokenId];
       string memory base = baseURI();
 
       return string(abi.encodePacked(base, _tokenURI));
