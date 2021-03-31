@@ -291,7 +291,7 @@ describe("IKB Wrapper", function() {
         await wrapperContract.connect(whaleOwner).wrapAll()
 
         for (edition of editions){
-          const regex = new RegExp(`${await wrapperContract.baseURI()}${await wrapperContract.tokenIpfsHash(edition)}`)
+          const regex = new RegExp(`${await wrapperContract.baseURI()}${await wrapperContract.tokenIPFSHash(edition)}`)
           const tokenURI = await wrapperContract.tokenURI(edition)
           assert(regex.test(tokenURI))
         }

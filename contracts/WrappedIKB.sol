@@ -110,7 +110,7 @@ contract WrappedIKB is ERC721, ERC721Burnable, Ownable {
    * @dev `tokenURIs` is private but it's helpful for owner to check the
    * `tokenURI` of a `tokenId` when `tokenId` is not minted yet by its owner.
   */
-  function tokenIpfsHash(uint256 tokenId_) public view returns(string memory){
+  function tokenIPFSHash(uint256 tokenId_) public view returns(string memory){
     return _tokenIPFSHashes[tokenId_];
   }
 
